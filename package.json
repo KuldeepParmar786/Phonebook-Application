@@ -1,0 +1,26 @@
+{
+  "name": "phonebook",
+  "version": "1.0.0",
+  "description": "backend for phonebook",
+  "main": "index.js",
+  "scripts": {
+    "build:ui": "rm -rf dist && cd ../Client && npm run build && cp -r dist ../Server",
+    "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push",
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "rr"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
