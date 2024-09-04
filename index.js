@@ -1,34 +1,14 @@
 const express=require('express')
+const Person=require('./models/phone')
 const app=express()
 const morgan=require('morgan')
 const cors=require('cors')
-let persons=[
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-  ]
-  app.use(express.static('dist'))
-  app.use(cors())
-  app.use(express.json())
-  app.use(morgan('data'))
-  morgan.token('data',(req,res)=>{return req.body})
+app.use(express.json())
+app.use(express.static('dist'))
+app.use(cors())
+app.use(morgan('data'))
+morgan.token('data',(req,res)=>{return req.body})
+let persons=[]
 const md=(request,response,next)=>{
    console.log('Method:',request.method)
    console.log('Path:',request.path)
@@ -37,7 +17,9 @@ const md=(request,response,next)=>{
 }
  app.use(md)
 app.get('/phonebook/persons',(request,response)=>{
-   response.json(persons)
+   Person.find({}).then(persons=>{
+      response.json(persons)
+   })
 })
 app.get('/phonebook/persons/info',(request,response)=>{
     let lengt=persons.length;
@@ -56,43 +38,55 @@ app.get('/phonebook/persons/info',(request,response)=>{
     response.send(resmessage)
 })
 
-app.get('/phonebook/persons/:id',(request,response)=>{
+app.get('/phonebook/persons/:id',(request,response,next)=>{
    const id=request.params.id
-   const person=persons.find(person=>person.id===id)
-  
-   if(person){
-    response.json(person)
-   }
-   else{
-     response.status(404).end()
-   }
+   Person.findById(id)
+   .then(result=>{
+      if(result){
+         response.json(result)
+        }
+        else{
+          response.status(404).end()
+        }
+   })
+   .catch(error=>next(error))
+   
 })
-app.delete('/phonebook/persons/:id',(request,response)=>{
-   const id=request.params.id
-   persons=persons.filter(person=>person.id!==id)
-   response.status(204).end()
+app.delete('/phonebook/persons/:id',(request,response,next)=>{
+    Person.findByIdAndDelete(request.params.id)
+    .then(result=>{response.status(204).end()})
+    .catch(error=>next(error))
 })
+
 app.post('/phonebook/persons/',(request,response)=>{
     const body=request.body
-    const generateId=()=>{
-
-       return String(Math.floor(Math.random()*99))
-    }
-    const newPerson={
-       name:body.name,
-       number:body.number,
-       id:generateId()
-    }
     if(!body.name || !body.number){
        response.status(400).send({error:'Name and number are required'})
     }
-    const per=persons.find(per=>per.name===newPerson.name)
-    if(per){
-       return response.status(409).send({error:'name must be unique'})
-    }
-    persons=persons.concat(newPerson)
-    response.json(newPerson)
+   
+    const person=new Person({
+       name:body.name,
+       number:body.number,
+    })
+
+    person.save().then(result=>{
+      response.json(result)
+    })
+   //  const per=persons.find(per=>per.name===newPerson.name)
+   //  if(per){
+   //     return response.status(409).send({error:'name must be unique'})
+   //  }
+   //  persons=persons.concat(newPerson)
+   //  response.json(newPerson)
 })
+const errorhandler=(request,response,error,next)=>{
+    console.log(error.message)
+    if(error.name==='CastError'){
+      return response.status(400).send({error:'malformatted ID'})
+    }
+    next(error)
+}
+app.use(errorhandler)
 const PORT=process.env.PORT || 3001
 app.listen(PORT,()=>{
     console.log(`Server Running at Port ${PORT}`)
